@@ -378,6 +378,7 @@
       }));
 
       ui.grid.replaceChildren(...lista.map(card));
+      ui.grid.classList.remove('cargando');
       ui.empty.hidden = lista.length > 0;
     }
 

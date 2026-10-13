@@ -16,6 +16,7 @@ Sitio estático (HTML, CSS y JavaScript, sin herramientas de armado). Los pedido
 - **Imágenes grandes del inicio:** en `index.html`, reemplazar cada `<div class="banner-art">` por `<img class="banner-photo" src="img/..." alt="" width="1200" height="1500">`.
 - **Textos legales:** `ayuda.html`. Lo marcado con `COMPLETAR` tiene que definirlo el local antes de publicar.
 - El header y el footer están repetidos en las tres páginas: un cambio ahí se hace en los tres archivos.
+- **Tipografías:** Figtree y Quicksand están en `fonts/` (solo alfabeto latino y los pesos que se usan), así la página no depende de Google Fonts para mostrarse.
 - Después de cambiar `styles.css`, `app.js` o `productos.js`, subir el número de `?v=` en los tres HTML para que los navegadores no muestren la versión vieja.
 
 Diseño y desarrollo por [Visual Solution](https://visual-solution.vercel.app).
