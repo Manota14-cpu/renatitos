@@ -1,4 +1,33 @@
 /* Renatitos — galería estilo Nike con la paleta del arcoíris del logo */
+
+/* Tipografías propias (sin pedirlas a Google): solo los pesos que se usan y el alfabeto latino.
+   Las "fallback" son Arial ajustada a las medidas de cada fuente, para que el texto no salte
+   cuando termina de cargar. */
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("fonts/figtree.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Quicksand";
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+  src: url("fonts/quicksand.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Figtree fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Roboto");
+  size-adjust: 98.5%; ascent-override: 96.4%; descent-override: 25.4%; line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Quicksand fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Roboto");
+  size-adjust: 100.8%; ascent-override: 99.2%; descent-override: 24.8%; line-gap-override: 0%;
+}
+
 :root {
   /* Base */
   --cream: #fcf9f4;      /* el mismo crema del logo */
@@ -23,8 +52,8 @@
   --jute-1: #efe4d2;
   --jute-2: #e5d4b9;
 
-  --font-display: "Quicksand", "Varela Round", ui-rounded, system-ui, sans-serif;
-  --font-text: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Quicksand", "Quicksand fallback", "Varela Round", ui-rounded, system-ui, sans-serif;
+  --font-text: "Figtree", "Figtree fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   --max: 1440px;
   --gutter: clamp(16px, 3.2vw, 48px);
@@ -257,6 +286,8 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .check .n { margin-left: auto; }
 
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px 16px; }
+/* Reserva lugar mientras app.js arma las tarjetas, así el pie no salta hacia abajo */
+.grid.cargando { min-height: 100vh; }
 .cat-empty { display: grid; justify-items: start; gap: 16px; padding: 32px 0; color: var(--muted); max-width: 48ch; }
 .cat-empty[hidden] { display: none; }
 
