@@ -101,32 +101,22 @@
   let bolsa = storage.get('renatitos-bolsa', []).filter((i) => porId.has(i.id) && Number.isInteger(i.cant) && i.cant > 0);
 
   const cartDialog = $('#cart-dialog');
+  const cartTitle = $('#cart-title');
+  const cartBody = $('#cart-body');
   const cartList = $('#cart-list');
   const cartEmpty = $('#cart-empty');
   const cartFoot = $('#cart-foot');
   const cartCount = $('#cart-count');
-  const cartWa = $('#cart-wa');
+  const checkout = $('#checkout');
+  const checkoutBack = $('#checkout-back');
+  const checkoutError = $('#checkout-error');
+  const payMp = $('#pay-mp');
+  const textoPayMp = payMp.textContent;
+  let paso = 'bolsa';
 
   const totalBolsa = () => bolsa.reduce((s, i) => s + porId.get(i.id).precio * i.cant, 0);
-  const entrega = () => (cartDialog.querySelector('input[name="entrega"]:checked')?.value === 'envio'
-    ? 'Envío a domicilio'
-    : 'Retiro en el local');
-
-  function mensajeWhatsApp() {
-    const lineas = bolsa.map((i) => {
-      const p = porId.get(i.id);
-      return `• ${i.cant} x ${p.nombre} (talle ${i.talle}): ${peso.format(p.precio * i.cant)}`;
-    });
-    const texto = [
-      `¡Hola ${CONFIG.nombre}! Quiero hacer este pedido:`,
-      '',
-      ...lineas,
-      '',
-      `Total: ${peso.format(totalBolsa())}`,
-      `Entrega: ${entrega()}`,
-    ].join('\n');
-    return `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(texto)}`;
-  }
+  const costoEnvio = () => (Number.isFinite(CONFIG.costoEnvio) && CONFIG.costoEnvio > 0 ? CONFIG.costoEnvio : 0);
+  const conEnvio = () => checkout.elements.entrega.value === 'envio';
 
   function cambiarCantidad(idx, delta) {
     const item = bolsa[idx];
@@ -143,8 +133,9 @@
     cartCount.hidden = unidades === 0;
     $('#open-cart').setAttribute('aria-label', `Abrir bolsa, ${plural(unidades, 'prenda', 'prendas')}`);
 
+    if (!bolsa.length && paso === 'datos') mostrarPaso('bolsa');
     cartEmpty.hidden = bolsa.length > 0;
-    cartFoot.hidden = bolsa.length === 0;
+    cartFoot.hidden = bolsa.length === 0 || paso === 'datos';
 
     cartList.replaceChildren(...bolsa.map((item, idx) => {
       const p = porId.get(item.id);
@@ -163,10 +154,8 @@
       return el('li', {}, scene(p, 'cart-art'), info);
     }));
 
-    if (bolsa.length) {
-      $('#cart-total').textContent = peso.format(totalBolsa());
-      cartWa.href = mensajeWhatsApp();
-    }
+    if (bolsa.length) $('#cart-total').textContent = peso.format(totalBolsa());
+    actualizarCheckout();
   }
 
   function agregar(id, talle) {
@@ -176,8 +165,162 @@
     renderBolsa();
   }
 
+  // ---- Finalizar compra: datos de envío y factura, y pago por Mercado Pago o WhatsApp ----
+  function mostrarPaso(nuevo) {
+    paso = nuevo;
+    const datos = paso === 'datos';
+    cartBody.hidden = datos;
+    cartFoot.hidden = datos || bolsa.length === 0;
+    checkout.hidden = !datos;
+    checkoutBack.hidden = !datos;
+    cartTitle.textContent = datos ? 'Finalizar compra' : 'Tu bolsa';
+    checkoutError.textContent = '';
+    if (datos) {
+      actualizarCheckout();
+      $('.checkout-body', checkout).scrollTop = 0;
+      cartTitle.focus();
+    }
+  }
+
+  // Muestra u oculta los campos que dependen de la entrega y de la factura (los ocultos no se validan ni se mandan)
+  function actualizarCheckout() {
+    const envio = conEnvio();
+    const envioCampos = $('#envio-campos');
+    envioCampos.hidden = !envio;
+    envioCampos.disabled = !envio;
+    $('#retiro-nota').hidden = envio;
+    const factura = $('#factura-campos');
+    const conFactura = checkout.elements.iva.value !== 'Consumidor final';
+    factura.hidden = !conFactura;
+    factura.disabled = !conFactura;
+
+    const nota = $('#envio-nota');
+    nota.hidden = !envio;
+    nota.textContent = costoEnvio()
+      ? `Incluye el envío: ${peso.format(costoEnvio())}.`
+      : 'El envío se cotiza aparte: te avisamos el costo por WhatsApp antes de despacharlo.';
+    $('#checkout-total').textContent = peso.format(totalBolsa() + (envio ? costoEnvio() : 0));
+    payMp.hidden = !CONFIG.pagos;
+  }
+
+  function cuitValido(cuit) {
+    if (!/^\d{11}$/.test(cuit)) return false;
+    const suma = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2].reduce((s, p, i) => s + p * Number(cuit[i]), 0);
+    const dv = (11 - (suma % 11)) % 11;
+    return dv !== 10 && dv === Number(cuit[10]);
+  }
+
+  function revisarDocumentos() {
+    const doc = checkout.elements.documento;
+    const d = doc.value.replace(/\D/g, '');
+    doc.setCustomValidity(!doc.value || (d.length >= 7 && d.length <= 8) || cuitValido(d)
+      ? ''
+      : 'Poné tu DNI (7 u 8 números) o tu CUIT (11 números).');
+    const cuit = checkout.elements.cuit;
+    cuit.setCustomValidity(!cuit.value || cuitValido(cuit.value.replace(/\D/g, '')) ? '' : 'Revisá el CUIT: son 11 números.');
+  }
+
+  const leerDatos = () => Object.fromEntries([...new FormData(checkout)].map(([k, v]) => [k, String(v).trim()]));
+
+  // Los datos quedan solo en este navegador, para no escribirlos de nuevo en la próxima compra
+  function recordarDatos(datos) {
+    const { nota, ...resto } = datos;
+    storage.set('renatitos-datos', resto);
+  }
+
+  function completarDatos() {
+    const guardados = storage.get('renatitos-datos', null);
+    if (!guardados || typeof guardados !== 'object') return;
+    for (const [k, v] of Object.entries(guardados)) {
+      const campo = checkout.elements[k];
+      if (campo && typeof v === 'string') campo.value = v;
+    }
+    revisarDocumentos();
+  }
+
+  function resumen(datos) {
+    const lineas = bolsa.map((i) => {
+      const p = porId.get(i.id);
+      return `• ${i.cant} x ${p.nombre} (talle ${i.talle}): ${peso.format(p.precio * i.cant)}`;
+    });
+    const envio = datos.entrega === 'envio' ? costoEnvio() : 0;
+    if (envio) lineas.push(`• Envío: ${peso.format(envio)}`);
+    return { lineas, total: totalBolsa() + envio, envioAparte: datos.entrega === 'envio' && !envio };
+  }
+
+  function entregaTexto(d) {
+    if (d.entrega !== 'envio') return 'Retiro en el local';
+    return `Envío a ${d.calle}${d.piso ? `, ${d.piso}` : ''}, ${d.localidad} (CP ${d.cp}), ${d.provincia}`;
+  }
+
+  function mensajeWhatsApp({ lineas, total, envioAparte }, d, pago) {
+    let saludo = `¡Hola ${CONFIG.nombre}! Quiero hacer este pedido:`;
+    if (pago) {
+      saludo = `¡Hola ${CONFIG.nombre}! Hice el pedido ${pago.pedido} y lo pagué con Mercado Pago`
+        + `${pago.operacion ? ` (operación ${pago.operacion})` : ''}${pago.pendiente ? '. El pago está pendiente de acreditación' : ''}:`;
+    }
+    const texto = [
+      saludo,
+      '',
+      ...lineas,
+      '',
+      `Total: ${peso.format(total)}${envioAparte ? ' + envío' : ''}`,
+      '',
+      'Mis datos:',
+      `Nombre: ${d.nombre}`,
+      `DNI/CUIT: ${d.documento}`,
+      `Celular: ${d.telefono}`,
+      `Email: ${d.email}`,
+      `Entrega: ${entregaTexto(d)}`,
+      `Factura: ${d.iva === 'Consumidor final' ? 'Consumidor final' : `${d.iva}, ${d.razon}, CUIT ${d.cuit}`}`,
+      ...(d.nota ? [`Aclaraciones: ${d.nota}`] : []),
+    ].join('\n');
+    return `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(texto)}`;
+  }
+
+  async function pagarConMercadoPago(datos) {
+    checkoutError.textContent = '';
+    payMp.disabled = true;
+    payMp.textContent = 'Abriendo Mercado Pago…';
+    try {
+      const r = await fetch(`${CONFIG.pagos}/preferencia`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: bolsa.map((i) => ({ id: i.id, talle: i.talle, cant: i.cant, precio: porId.get(i.id).precio })),
+          comprador: datos,
+          sitio: new URL('.', location.href).href,
+        }),
+      });
+      const res = await r.json().catch(() => ({}));
+      if (!r.ok || typeof res.url !== 'string') throw new Error(res.error || 'Mercado Pago no respondió.');
+      storage.set('renatitos-pedido', { pedido: res.pedido, datos, ...resumen(datos) });
+      location.href = res.url;
+    } catch (err) {
+      const motivo = err instanceof TypeError ? 'No pudimos conectar con Mercado Pago.' : err.message;
+      checkoutError.textContent = `${motivo} Probá de nuevo o seguí por WhatsApp.`;
+      payMp.disabled = false;
+      payMp.textContent = textoPayMp;
+    }
+  }
+
   $('#open-cart').addEventListener('click', () => cartDialog.showModal());
-  $$('input[name="entrega"]').forEach((r) => r.addEventListener('change', () => { cartWa.href = mensajeWhatsApp(); }));
+  $('#cart-next').addEventListener('click', () => mostrarPaso('datos'));
+  checkoutBack.addEventListener('click', () => mostrarPaso('bolsa'));
+  cartDialog.addEventListener('close', () => mostrarPaso('bolsa'));
+  checkout.addEventListener('change', actualizarCheckout);
+  checkout.addEventListener('input', () => { revisarDocumentos(); checkoutError.textContent = ''; });
+  checkout.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!bolsa.length) return;
+    const datos = leerDatos();
+    recordarDatos(datos);
+    if (e.submitter?.value === 'mp' && CONFIG.pagos) pagarConMercadoPago(datos);
+    else location.href = mensajeWhatsApp(resumen(datos), datos);
+  });
+  // Si vuelve con "atrás" desde Mercado Pago, el botón tiene que quedar usable
+  window.addEventListener('pageshow', () => { payMp.disabled = false; payMp.textContent = textoPayMp; });
+  completarDatos();
 
   // Si otra pestaña cambia la bolsa, mantenerla al día
   window.addEventListener('storage', (e) => {
@@ -185,6 +328,39 @@
     bolsa = storage.get('renatitos-bolsa', []).filter((i) => porId.has(i.id));
     renderBolsa();
   });
+
+  // ---- Vuelta de Mercado Pago (index.html?pago=ok|pendiente|error) ----
+  const pagoDialog = $('#pago-dialog');
+  const vuelta = new URLSearchParams(location.search);
+  const estadoPago = vuelta.get('pago');
+  if (pagoDialog && ['ok', 'pendiente', 'error'].includes(estadoPago)) {
+    history.replaceState(null, '', location.pathname + location.hash);
+    const guardado = storage.get('renatitos-pedido', null);
+    const pedido = (vuelta.get('external_reference') || guardado?.pedido || '').replace(/[^A-Z0-9-]/g, '');
+    const operacion = (vuelta.get('payment_id') || vuelta.get('collection_id') || '').replace(/\D/g, '');
+    const titulo = $('#pago-title');
+    const texto = $('#pago-texto');
+    const wa = $('#pago-wa');
+
+    if (estadoPago === 'error') {
+      titulo.textContent = 'El pago no se completó';
+      texto.textContent = 'No se hizo ningún cobro y tu bolsa sigue guardada. Podés intentar de nuevo o hacer el pedido por WhatsApp.';
+    } else {
+      const pendiente = estadoPago === 'pendiente';
+      const retiro = guardado?.datos?.entrega !== 'envio';
+      titulo.textContent = pendiente ? 'Tu pago está pendiente' : '¡Gracias por tu compra!';
+      texto.textContent = pendiente
+        ? `Guardamos tu pedido ${pedido}. Cuando Mercado Pago acredite el pago, te escribimos para coordinar ${retiro ? 'el retiro' : 'el envío'}.`
+        : `Recibimos el pago del pedido ${pedido}. Te escribimos para coordinar ${retiro ? 'el retiro en el local' : 'el envío'}. Si querés agilizarlo, mandanos el pedido por WhatsApp.`;
+      if (guardado?.datos && guardado.pedido === pedido) {
+        wa.href = mensajeWhatsApp(guardado, guardado.datos, { pedido, operacion, pendiente });
+        wa.hidden = false;
+      }
+      bolsa = [];
+      storage.set('renatitos-pedido', null);
+    }
+    pagoDialog.showModal();
+  }
 
   // ---- Diálogos: cerrar con botón, clic en el fondo o Esc ----
   $$('dialog').forEach((dlg) => {

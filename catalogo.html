@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Catálogo — Renatitos</title>
   <meta name="description" content="Catálogo de ropa para bebés, nenas y nenes de Renatitos. Elegí talle, armá tu pedido y envialo por WhatsApp. Envíos a todo el país.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src https://renatitos-pagos.visual-app-licencias.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#fcf9f4">
   <meta property="og:title" content="Renatitos — Moda infantil">
@@ -14,9 +14,9 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 40' fill='none' stroke-width='6'%3E%3Cpath d='M5 38a27 27 0 0 1 54 0' stroke='%23dea8a6'/%3E%3Cpath d='M12 38a20 20 0 0 1 40 0' stroke='%23c49672'/%3E%3Cpath d='M19 38a13 13 0 0 1 26 0' stroke='%23d8c2b5'/%3E%3Cpath d='M26 38a6 6 0 0 1 12 0' stroke='%23adaea0'/%3E%3C/svg%3E">
   <link rel="preload" href="fonts/quicksand.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=5">
-  <script src="productos.js?v=5" defer></script>
-  <script src="app.js?v=5" defer></script>
+  <link rel="stylesheet" href="styles.css?v=6">
+  <script src="productos.js?v=6" defer></script>
+  <script src="app.js?v=6" defer></script>
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -266,13 +266,15 @@
     </div>
   </dialog>
 
-  <!-- Bolsa -->
+  <!-- Bolsa y finalizar compra -->
   <dialog id="cart-dialog" class="modal drawer" aria-labelledby="cart-title">
     <div class="drawer-head">
-      <h2 class="h-lg" id="cart-title">Tu bolsa</h2>
-      <button type="button" class="icon-btn" data-close aria-label="Cerrar bolsa"><svg class="ico"><use href="#i-close"/></svg></button>
+      <button type="button" class="icon-btn" id="checkout-back" aria-label="Volver a la bolsa" hidden><svg class="ico flip"><use href="#i-chev"/></svg></button>
+      <h2 class="h-lg" id="cart-title" tabindex="-1">Tu bolsa</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Cerrar"><svg class="ico"><use href="#i-close"/></svg></button>
     </div>
-    <div class="drawer-body">
+
+    <div class="drawer-body" id="cart-body">
       <div class="cart-empty" id="cart-empty">
         <p>Tu bolsa está vacía.</p>
         <a class="pill" href="catalogo.html" data-close>Ver el catálogo</a>
@@ -280,15 +282,99 @@
       <ul class="cart-list" id="cart-list"></ul>
     </div>
     <div class="drawer-foot" id="cart-foot" hidden>
-      <fieldset class="delivery">
-        <legend>Entrega</legend>
-        <label><input type="radio" name="entrega" value="retiro" checked> Retiro en el local</label>
-        <label><input type="radio" name="entrega" value="envio"> Envío a domicilio</label>
-      </fieldset>
       <p class="total"><span>Total</span><strong id="cart-total"></strong></p>
-      <a class="pill pill-lg" id="cart-wa" href="#" rel="noopener">Enviar pedido por WhatsApp</a>
-      <p class="small muted">Te confirmamos stock, forma de pago y costo de envío por WhatsApp.</p>
+      <button class="pill pill-lg" type="button" id="cart-next">Finalizar compra</button>
     </div>
+
+    <!-- Paso 2: datos para el envío y la factura, y forma de pago -->
+    <form class="checkout" id="checkout" hidden>
+      <div class="drawer-body checkout-body">
+        <fieldset class="fields">
+          <legend>Tus datos</legend>
+          <label class="field"><span>Nombre y apellido</span><input name="nombre" autocomplete="name" required minlength="3" maxlength="80"></label>
+          <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required maxlength="120"></label>
+          <div class="field-row">
+            <label class="field"><span>Celular</span><input name="telefono" type="tel" autocomplete="tel" required pattern="[0-9 +\-\(\)]{8,20}" maxlength="20" placeholder="3492 15 123456"></label>
+            <label class="field"><span>DNI o CUIT</span><input name="documento" inputmode="numeric" required maxlength="13"></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="fields">
+          <legend>Entrega</legend>
+          <div class="delivery">
+            <label><input type="radio" name="entrega" value="retiro" checked> Retiro en el local</label>
+            <label><input type="radio" name="entrega" value="envio"> Envío a domicilio</label>
+          </div>
+          <p class="small muted" id="retiro-nota">Bv. Roca 1678, Rafaela. Te avisamos cuando esté listo.</p>
+        </fieldset>
+        <fieldset class="fields" id="envio-campos" disabled hidden>
+          <legend class="sr">Dirección de envío</legend>
+          <label class="field"><span>Calle y número</span><input name="calle" autocomplete="address-line1" required minlength="3" maxlength="100"></label>
+          <label class="field"><span>Piso y depto <em>(opcional)</em></span><input name="piso" autocomplete="address-line2" maxlength="40"></label>
+          <div class="field-row">
+            <label class="field"><span>Localidad</span><input name="localidad" autocomplete="address-level2" required minlength="2" maxlength="60"></label>
+            <label class="field"><span>Código postal</span><input name="cp" autocomplete="postal-code" required pattern="[A-Za-z]?[0-9]{4}[A-Za-z]{0,3}" maxlength="8"></label>
+          </div>
+          <label class="field"><span>Provincia</span>
+            <select name="provincia" autocomplete="address-level1" required>
+              <option value="">Elegí la provincia</option>
+              <option>Buenos Aires</option>
+              <option>Ciudad Autónoma de Buenos Aires</option>
+              <option>Catamarca</option>
+              <option>Chaco</option>
+              <option>Chubut</option>
+              <option>Córdoba</option>
+              <option>Corrientes</option>
+              <option>Entre Ríos</option>
+              <option>Formosa</option>
+              <option>Jujuy</option>
+              <option>La Pampa</option>
+              <option>La Rioja</option>
+              <option>Mendoza</option>
+              <option>Misiones</option>
+              <option>Neuquén</option>
+              <option>Río Negro</option>
+              <option>Salta</option>
+              <option>San Juan</option>
+              <option>San Luis</option>
+              <option>Santa Cruz</option>
+              <option>Santa Fe</option>
+              <option>Santiago del Estero</option>
+              <option>Tierra del Fuego</option>
+              <option>Tucumán</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset class="fields">
+          <legend>Facturación</legend>
+          <label class="field"><span>Condición frente al IVA</span>
+            <select name="iva">
+              <option>Consumidor final</option>
+              <option>Monotributista</option>
+              <option>Responsable inscripto</option>
+              <option>Exento</option>
+            </select>
+          </label>
+          <fieldset class="fields" id="factura-campos" disabled hidden>
+            <legend class="sr">Datos para la factura</legend>
+            <label class="field"><span>Nombre o razón social</span><input name="razon" autocomplete="organization" required minlength="3" maxlength="120"></label>
+            <label class="field"><span>CUIT</span><input name="cuit" inputmode="numeric" required maxlength="13" placeholder="20-12345678-9"></label>
+          </fieldset>
+        </fieldset>
+
+        <label class="field"><span>Aclaraciones <em>(opcional)</em></span><textarea name="nota" rows="2" maxlength="300"></textarea></label>
+      </div>
+
+      <div class="drawer-foot">
+        <p class="total"><span>Total</span><strong id="checkout-total"></strong></p>
+        <p class="small muted" id="envio-nota" hidden></p>
+        <p class="error" id="checkout-error" role="alert"></p>
+        <button class="pill pill-lg" type="submit" name="pago" value="mp" id="pay-mp">Pagar con Mercado Pago</button>
+        <button class="pill pill-lg pill-line" type="submit" name="pago" value="wa">Continuar por WhatsApp</button>
+        <p class="small muted">Tus datos se usan solo para tu compra. <a href="ayuda.html#privacidad">Privacidad</a></p>
+      </div>
+    </form>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

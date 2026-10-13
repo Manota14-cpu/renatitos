@@ -423,14 +423,17 @@ mark.todo { background: var(--rose-t); color: #8a3a35; padding: 0 4px; border-bo
 
 .drawer { margin: 0 0 0 auto; height: 100dvh; width: min(440px, 100%); }
 .drawer[open] { display: flex; flex-direction: column; }
-.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 16px 24px; border-bottom: 1px solid var(--line); }
+.drawer-head { display: flex; align-items: center; gap: 4px; padding: 16px 16px 16px 24px; border-bottom: 1px solid var(--line); }
+.drawer-head h2 { margin-right: auto; }
+.drawer-head h2:focus { outline: none; }
+#checkout-back { margin-left: -12px; }
+#checkout-back[hidden] { display: none; }
 .drawer-body { flex: 1; overflow: auto; padding: 8px 24px; }
 .cart-empty { display: grid; justify-items: start; gap: 16px; padding: 24px 0; color: var(--muted); }
 .cart-empty[hidden] { display: none; }
 .drawer-foot { padding: 16px 24px 24px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
 .drawer-foot[hidden] { display: none; }
 .delivery { display: flex; flex-wrap: wrap; gap: 8px 20px; }
-.delivery legend { font-weight: 600; margin-bottom: 8px; width: 100%; }
 .delivery label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .delivery input { width: 18px; height: 18px; accent-color: var(--ink); margin: 0; }
 .total { display: flex; justify-content: space-between; align-items: baseline; }
@@ -447,6 +450,42 @@ mark.todo { background: var(--rose-t); color: #8a3a35; padding: 0 4px; border-bo
 .qty button:hover { background: var(--sand-t); }
 .qty span { min-width: 24px; text-align: center; font-weight: 600; }
 .link-btn { background: none; border: 0; padding: 4px; color: var(--muted); text-decoration: underline; font-size: 14px; }
+
+/* Finalizar compra */
+.checkout { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.checkout[hidden] { display: none; }
+.checkout-body { padding-block: 20px 28px; display: grid; gap: 24px; align-content: start; }
+.fields { display: grid; gap: 12px; }
+.fields[hidden] { display: none; }
+.fields legend { font-weight: 600; margin-bottom: 12px; }
+.field { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+.field em { font-style: normal; }
+.field input, .field select, .field textarea {
+  width: 100%; min-height: 46px; padding: 10px 14px;
+  font: 400 16px/1.4 var(--font-text); color: var(--ink);
+  background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+}
+.field textarea { resize: vertical; min-height: 64px; }
+.field select {
+  appearance: none; -webkit-appearance: none; padding-right: 40px;
+  background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2347413d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center / 16px;
+}
+.field input:hover, .field select:hover, .field textarea:hover { border-color: var(--sand); }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
+.field input:user-invalid, .field select:user-invalid { border-color: #a1342b; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.checkout .drawer-foot { gap: 10px; }
+.checkout .drawer-foot .error:empty { display: none; }
+.checkout .drawer-foot a { text-decoration: underline; text-underline-offset: 3px; }
+.pill:disabled { opacity: .6; cursor: progress; }
+.pill-line { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.pill-line:hover { background: var(--sand-t); }
+.pill[hidden] { display: none; }
+
+/* Aviso al volver de Mercado Pago */
+.notice { width: min(440px, calc(100% - 32px)); margin: auto; padding: 32px 28px 28px; border-radius: 20px; }
+.notice[open] { display: grid; gap: 14px; }
+.notice p { color: var(--muted); margin-bottom: 6px; }
 
 .toast {
   position: fixed; left: 50%; bottom: 24px; z-index: 200;

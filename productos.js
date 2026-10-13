@@ -3,6 +3,11 @@ window.RENATITOS = Object.freeze({
   CONFIG: {
     nombre: 'Renatitos',
     whatsapp: '5493492576899', // 54 9 + característica sin 0 + número
+    // Servidor que arma el cobro con Mercado Pago (carpeta pagos/). Vacío = sin botón de Mercado Pago.
+    pagos: 'https://renatitos-pagos.visual-app-licencias.workers.dev',
+    // Costo fijo del envío a domicilio, que se suma al pago con Mercado Pago.
+    // null = el envío se cotiza y se paga aparte (se avisa por WhatsApp).
+    costoEnvio: null,
   },
 
   // Talles de ejemplo: ajustar a los que trabaja el local.
