@@ -1,0 +1,7 @@
+name = "renatitos-pagos"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# Dirección de la página (con su carpeta). Varias, separadas por coma.
+SITIO = "https://manota14-cpu.github.io/renatitos"
